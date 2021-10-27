@@ -4,7 +4,4 @@
 import sys
 import ast
 
-st = ast.parse('5 + 6')
-pstr = ast.dump(ast.parse('5 + q'),indent=4)
-
-print(help(pstr))
+Assign(targets=[Name(id='a', ctx=Store())], value=Constant(value=49))
