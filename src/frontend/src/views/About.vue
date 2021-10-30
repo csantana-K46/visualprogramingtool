@@ -9,6 +9,18 @@
             <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="add">
               <span> Add</span>
             </div>
+            <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="sub">
+              <span> Sub</span>
+            </div>
+            <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="mult">
+              <span> Mult</span>
+            </div>
+            <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="div">
+              <span> Div</span>
+            </div>
+            <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="ifelse">
+              <span> If/Else</span>
+            </div>
             <div class="drag-drawflow" draggable="true" v-on:dragstart="drag" data-node="print">
               <span> Print</span>
             </div>
@@ -215,9 +227,52 @@ export default {
           `
           this.editor.addNode('add', 2, 1, pos_x, pos_y, 'add', {astType: "Add", op: "Add"}, add );
           break;
+        case 'sub':
+          var sub = `
+          <div>
+            <div class="title-box">Sub</div>
+          </div>
+          `
+          this.editor.addNode('sub', 2, 1, pos_x, pos_y, 'sub', {astType: "Sub", op: "Sub"}, sub );
+          break;
+        case 'mult':
+          var mult = `
+          <div>
+            <div class="title-box">Mult</div>
+          </div>
+          `
+          this.editor.addNode('mult', 2, 1, pos_x, pos_y, 'mult', {astType: "Mult", op: "Mult"}, mult );
+          break;
+        case 'div':
+          var div = `
+          <div>
+            <div class="title-box">Div</div>
+          </div>
+          `
+          this.editor.addNode('div', 2, 1, pos_x, pos_y, 'div', {astType: "Div", op: "Div"}, div );
+          break;
         case 'print':
           var print = `<div><div class="title-box">Print</div></div>`;
-          this.editor.addNode('print', 1, 0, pos_x, pos_y, 'print', {}, print );
+          this.editor.addNode('print', 1, 0, pos_x, pos_y, 'print', {astType: "Print"}, print );
+          break;
+        case 'ifelse':
+          var ifelse = `<div>
+                          <div class="title-box">If/Else</div>
+                          <div class="box">
+                          <p>select operator</p>
+                          <Select df-op>
+                            <option value="Eq()">Equal</option>
+                            <option value="Gt()">Gt</option>
+                            <option value="Lt()">Lt</option>
+                            <option value="NotEq()">Not Equal</option>
+                            <option value="GtE()">GtE</option>
+                            <option value="LtE()">LtE()</option>
+                          </select>
+                            <p>Comparator</p>
+                            <input type="text" df-comparators>
+                          </div>
+                          </div>`;
+          this.editor.addNode('ifelse', 1, 2, pos_x, pos_y, 'ifelse', {astType: "IfElse"}, ifelse );
           break;
         case 'telegram':
           var telegrambot = `
