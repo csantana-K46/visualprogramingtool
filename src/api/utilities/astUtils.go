@@ -2,6 +2,7 @@ package utilities
 
 import (
 	ast "api/models"
+	"fmt"
 	"log"
 	"strconv"
 )
@@ -45,7 +46,7 @@ func FillAssign(node ast.RequestBody) ast.AstNode {
 	gNode.Ast = n.Parse()
 	gNode.Status = ast.COMPLETE
 	gNode.AstType = data.AstType
-
+	gNode.ContextName = data.Name
 	return gNode
 }
 
@@ -85,7 +86,7 @@ func FillBinOp(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes 
 
 			if g.NodeId == leftId {
 				if g.AstType == "Assign" {
-					binOp.Left = ast.Name{Id: "fix"}.Parse()
+					binOp.Left = ast.Name{Id: g.ContextName}.Parse()
 				} else if g.AstType == "Constant" {
 					binOp.Left = ast.Constant{Value: "fix"}.Parse()
 				} else if g.AstType == "Add" {
@@ -94,7 +95,7 @@ func FillBinOp(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes 
 				}
 			} else if g.NodeId == rightId {
 				if g.AstType == "Assign" {
-					binOp.Right = ast.Name{Id: "fix"}.Parse()
+					binOp.Right = ast.Name{Id: g.ContextName}.Parse()
 				} else if g.AstType == "Constant" {
 					binOp.Right = ast.Constant{Value: "fix"}.Parse()
 				} else if g.AstType == "Add" {
@@ -197,42 +198,46 @@ func FillIfElse(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes
 
 	if bodyNodeId > 0 || orElseNodeId > 0 || inputNodeId > 0 {
 		for _, g := range genericNodes { //TODO: use dict access insted of iteration
-
-			if g.NodeId == inputNodeId {
-				if g.AstType == "Assign" {
-					ifElse.LeftCompare = ast.Name{Id: "fix"}.Parse()
-				} else if g.AstType == "Constant" {
-					ifElse.LeftCompare = ast.Constant{Value: "fix"}.Parse()
-				} else if g.AstType == "Add" {
-					ifElse.LeftCompare = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				} else if g.AstType == "Print" {
-					ifElse.LeftCompare = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				}
-			} else if g.NodeId == bodyNodeId {
-				if g.AstType == "Assign" {
-					ifElse.Body = ast.Name{Id: "fix"}.Parse()
-				} else if g.AstType == "Constant" {
-					ifElse.Body = ast.Constant{Value: "fix"}.Parse()
-				} else if g.AstType == "Add" {
-					ifElse.Body = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				} else if g.AstType == "Print" {
-					ifElse.Body = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				}
-			} else if g.NodeId == orElseNodeId {
-				if g.AstType == "Assign" {
-					ifElse.OrElse = ast.Name{Id: "fix"}.Parse()
-				} else if g.AstType == "Constant" {
-					ifElse.OrElse = ast.Constant{Value: "fix"}.Parse()
-				} else if g.AstType == "Add" {
-					ifElse.OrElse = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				} else if g.AstType == "Print" {
-					ifElse.Body = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+			if g.Status == ast.COMPLETE {
+				if g.NodeId == inputNodeId {
+					if g.AstType == "Assign" {
+						ifElse.LeftCompare = ast.Name{Id: g.ContextName}.Parse()
+					} else if g.AstType == "Constant" {
+						ifElse.LeftCompare = ast.Constant{Value: "fix"}.Parse()
+					} else if g.AstType == "Add" {
+						ifElse.LeftCompare = g.Ast
+						nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+					} else if g.AstType == "Sub" {
+						ifElse.LeftCompare = g.Ast
+						nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+					} else if g.AstType == "Print" {
+						ifElse.LeftCompare = g.Ast
+						nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+					}
+				} else if g.NodeId == bodyNodeId {
+					if g.AstType == "Assign" {
+						ifElse.Body = ast.Name{Id: g.ContextName}.Parse()
+					} else if g.AstType == "Constant" {
+						ifElse.Body = ast.Constant{Value: "fix"}.Parse()
+					} else if g.AstType == "Add" {
+						ifElse.Body = g.Ast
+						delete(exeNodes, g.NodeId)
+					} else if g.AstType == "Print" {
+						ifElse.Body = g.Ast
+						delete(exeNodes, g.NodeId)
+					}
+				} else if g.NodeId == orElseNodeId {
+					if g.AstType == "Assign" {
+						ifElse.OrElse = ast.Name{Id: g.ContextName}.Parse()
+					} else if g.AstType == "Constant" {
+						ifElse.OrElse = ast.Constant{Value: "fix"}.Parse()
+					} else if g.AstType == "Add" {
+						ifElse.OrElse = g.Ast
+						delete(exeNodes, g.NodeId)
+					} else if g.AstType == "Print" {
+						ifElse.OrElse = g.Ast
+						delete(exeNodes, g.NodeId)
+					}
 				}
 			}
 		}
@@ -242,13 +247,6 @@ func FillIfElse(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes
 		gNode.NodeId = node.Id
 		gNode.AstType = data.AstType
 		gNode.Ast = ifElse.Parse()
-
-		if HasOutputs(node.Outputs) {
-			gNode.Ast = ifElse.Parse() // TODO: parse expression
-		} else {
-			gNode.Ast = ifElse.Parse()
-		}
-		gNode.AstType = data.AstType
 
 		if ifElse.IsComplete() {
 			gNode.Status = ast.COMPLETE
@@ -265,7 +263,7 @@ func FillIfElse(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes
 					if val, ok := exeNodes[gNode.NodeId]; ok {
 						actualExecution = val
 					} else {
-						lids := []int{bodyNodeId, orElseNodeId}
+						lids := []int{}
 						actualExecution = &ast.ExecutionNode{Letf: lids, Receptor: gNode.NodeId}
 						exeNodes[gNode.NodeId] = actualExecution
 					}
@@ -287,7 +285,7 @@ func FillIfElse(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes
 					}
 				}
 			} else {
-				lids := []int{bodyNodeId, orElseNodeId}
+				lids := []int{}
 				exeNodes[gNode.NodeId] = &ast.ExecutionNode{Letf: lids, Receptor: gNode.NodeId}
 			}
 		} else {
@@ -317,18 +315,22 @@ func FillPrint(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes 
 		leftNodeId = intValue
 	}
 
-	for _, g := range genericNodes { //TODO: use dict access insted of iteration
-		if g.NodeId == leftNodeId {
-			hasArgsNode = true
-			if g.Status == ast.COMPLETE {
-				if g.AstType == "Assign" {
-					printP.Args = ast.Name{Id: "fix"}.Parse()
-				} else if g.AstType == "Add" {
-					printP.Args = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
-				} else if g.AstType == "Sub" {
-					printP.Args = g.Ast
-					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+	if data.Value != "" {
+		printP.Args = ast.Constant{Value: data.Value}.Parse()
+	} else {
+		for _, g := range genericNodes { //TODO: use dict access insted of iteration
+			if g.NodeId == leftNodeId {
+				hasArgsNode = true
+				if g.Status == ast.COMPLETE {
+					if g.AstType == "Assign" {
+						printP.Args = ast.Name{Id: g.ContextName}.Parse()
+					} else if g.AstType == "Add" {
+						printP.Args = g.Ast
+						nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+					} else if g.AstType == "Sub" {
+						printP.Args = g.Ast
+						nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+					}
 				}
 			}
 		}
@@ -344,6 +346,111 @@ func FillPrint(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes 
 	gNode.AstType = data.AstType
 	lids := []int{leftNodeId}
 	nodeAbsorbProcess(nodeIdsToAssume, exeNodes, gNode, lids)
+	return gNode
+}
+
+func FillForInRange(node ast.RequestBody, genericNodes map[int]ast.AstNode, exeNodes map[int]*ast.ExecutionNode) ast.AstNode {
+	gNode := ast.AstNode{}
+	data := node.Data
+	front := 0
+	to := 0
+	body := 0
+	nodeIdsToAssume := []int{}
+	forInRange := ast.ForIn{Front: "", To: "", Target: "", Iter: "", Body: ""}
+
+	if val, ok := genericNodes[node.Id]; ok {
+		gNode = val
+	}
+
+	if len(node.Inputs.Input1.Connection) > 0 {
+		intValue, err := strconv.Atoi(node.Inputs.Input1.Connection[0].Node)
+		if err != nil {
+			log.Println(err)
+		}
+		front = intValue
+	}
+
+	if len(node.Inputs.Input2.Connection) > 0 {
+		intValue, err := strconv.Atoi(node.Inputs.Input2.Connection[0].Node)
+		if err != nil {
+			log.Println(err)
+		}
+		to = intValue
+	}
+
+	if len(node.Outputs.Output1.Connection) > 0 {
+		intValue, err := strconv.Atoi(node.Outputs.Output1.Connection[0].Node)
+		if err != nil {
+			log.Println(err)
+		}
+		body = intValue
+	}
+
+	var inputNodes []ast.AstNode
+
+	if val, ok := genericNodes[front]; ok {
+		inputNodes = append(inputNodes, val)
+	}
+
+	if val, ok := genericNodes[to]; ok {
+		inputNodes = append(inputNodes, val)
+	}
+
+	if val, ok := genericNodes[body]; ok {
+		if val.Status == ast.COMPLETE {
+			forInRange.Body = fmt.Sprintf("Expr(value=%s)", val.Ast)
+			nodeIdsToAssume = append(nodeIdsToAssume, val.NodeId)
+		}
+	}
+
+	for _, g := range inputNodes {
+		if g.NodeId == front {
+			if g.Status == ast.COMPLETE {
+				if g.AstType == "Assign" {
+					forInRange.Front = ast.Name{Id: g.ContextName}.Parse()
+				} else if g.AstType == "Add" {
+					forInRange.Front = g.Ast
+					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+				} else if g.AstType == "Sub" {
+					forInRange.Front = g.Ast
+					nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+				}
+			}
+		} else if g.NodeId == to {
+			if g.AstType == "Assign" {
+				forInRange.To = ast.Name{Id: g.ContextName}.Parse()
+			} else if g.AstType == "Add" {
+				forInRange.To = g.Ast
+				nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+			} else if g.AstType == "Sub" {
+				forInRange.To = g.Ast
+				nodeIdsToAssume = append(nodeIdsToAssume, g.NodeId)
+			}
+		}
+	}
+
+	gNode.AstType = data.AstType
+	gNode.Ast = forInRange.Parse()
+	gNode.NodeId = node.Id
+
+	if forInRange.IsComplete() {
+		gNode.Status = ast.COMPLETE
+	} else {
+		gNode.Status = ast.INPROCESS
+	}
+
+	lids := []int{}
+	nodeAbsorbProcess(nodeIdsToAssume, exeNodes, gNode, lids)
+	return gNode
+}
+
+func FillCode(node ast.RequestBody, exeNodes map[int]*ast.ExecutionNode) ast.AstNode {
+	gNode := ast.AstNode{}
+	gNode.Code = node.Data.Value
+	gNode.AstType = node.Data.AstType
+	gNode.NodeId = node.Id
+	gNode.Status = ast.COMPLETE
+	exeNodes[gNode.NodeId] = &ast.ExecutionNode{Letf: []int{}, Receptor: gNode.NodeId}
 	return gNode
 }
 
@@ -425,6 +532,18 @@ func NodeFillManager(node ast.RequestBody, genericNodes map[int]ast.AstNode, exe
 		}
 	} else if astType == "Print" {
 		nodeBuilt = FillPrint(node, genericNodes, execNodes)
+		if nodeBuilt.Status == ast.COMPLETE || nodeBuilt.Status == ast.INPROCESS {
+			status = nodeBuilt.Status
+			genericNodes[node.Id] = nodeBuilt
+		}
+	} else if astType == "ForIn" {
+		nodeBuilt = FillForInRange(node, genericNodes, execNodes)
+		if nodeBuilt.Status == ast.COMPLETE || nodeBuilt.Status == ast.INPROCESS {
+			status = nodeBuilt.Status
+			genericNodes[node.Id] = nodeBuilt
+		}
+	} else if astType == "Code" {
+		nodeBuilt = FillCode(node, execNodes)
 		if nodeBuilt.Status == ast.COMPLETE || nodeBuilt.Status == ast.INPROCESS {
 			status = nodeBuilt.Status
 			genericNodes[node.Id] = nodeBuilt

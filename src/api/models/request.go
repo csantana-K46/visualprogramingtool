@@ -50,3 +50,8 @@ type RequestBody struct {
 type JData struct {
 	Data string
 }
+
+type Response struct {
+	StatusCode string
+	Result     string
+}

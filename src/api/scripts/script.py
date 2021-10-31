@@ -2,6 +2,8 @@
 #package main
 
 import sys
-import ast
+from ast import *
 
-Assign(targets=[Name(id='a', ctx=Store())], value=Constant(value=49))
+def f():
+    print('sii')
+f()

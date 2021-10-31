@@ -18,6 +18,7 @@ type Constant struct {
 }
 
 func (c Constant) Parse() string {
+
 	return fmt.Sprintf("Constant(value=%s))", c.Value)
 }
 
@@ -37,7 +38,7 @@ type BinOp struct {
 }
 
 func (b BinOp) Parse() string {
-	return fmt.Sprintf("BinOp(left=%s, op=%s, right=%s)", b.Left, b.Op, b.Right)
+	return fmt.Sprintf("BinOp(left=%s, op=%s(), right=%s)", b.Left, b.Op, b.Right)
 }
 func (b BinOp) IsComplete() bool {
 	isComplete := false
@@ -68,6 +69,9 @@ func (i IfElse) Parse() string {
 func (i IfElse) IsComplete() bool {
 	isComplete := false
 
+	if i.LeftCompare != "" && i.Ops != "" && i.Comparators != "" && i.Body != "" {
+		isComplete = true
+	}
 	return isComplete
 }
 
@@ -83,6 +87,8 @@ func (p PrintP) ParseExpr() string {
 }
 
 type ForIn struct {
+	Front  string
+	To     string
 	Target string
 	Iter   string
 	Body   string
@@ -90,7 +96,21 @@ type ForIn struct {
 }
 
 func (f ForIn) Parse() string {
-	return fmt.Sprintf("For(target=%s, iter=%s, body=[%s]), Orelse=[%s]", f.Target, f.Iter, f.Body, f.Orelse)
+	target := "Name(id='x', ctx=Store())"
+	args := fmt.Sprintf("%s, %s", f.Front, f.To)
+	iter := fmt.Sprintf(
+		"Call(func=Name(id='range', ctx=Load()), args=[%s], keywords=[])", args)
+
+	return fmt.Sprintf("For(target=%s, iter=%s, body=[%s]), Orelse=[%s]", target, iter, f.Body, f.Orelse)
+}
+func (f ForIn) IsComplete() bool {
+	isComplete := false
+
+	if f.Front != "" && f.To != "" && f.Body != "" {
+		isComplete = true
+	}
+
+	return isComplete
 }
 
 type ExecutionNode struct {
@@ -99,10 +119,12 @@ type ExecutionNode struct {
 }
 
 type AstNode struct {
-	Ast     string
-	NodeId  int
-	Status  string
-	AstType string
+	Ast         string
+	NodeId      int
+	Status      string
+	AstType     string
+	ContextName string
+	Code        string
 }
 
 type PythonModule struct {

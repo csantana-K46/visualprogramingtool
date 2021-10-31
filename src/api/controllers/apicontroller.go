@@ -4,13 +4,13 @@ import (
 	c "api/config"
 	d "api/database"
 	ast "api/models"
+	"api/scripts"
 	utils "api/utilities"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 )
 
 func Get(w http.ResponseWriter, r *http.Request) {
@@ -36,31 +36,26 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp.Json)
 }
 
-func WriteAstScript(ast string) {
-	file, err := os.OpenFile("scripts/script.py", os.O_APPEND|os.O_WRONLY, 0644)
+func ParseCode(w http.ResponseWriter, r *http.Request) {
+
+	var jd ast.JData
+	var nodes []ast.RequestBody
+	var nodesCopy []ast.RequestBody
+	var result string
+
+	err := json.NewDecoder(r.Body).Decode(&jd)
 	if err != nil {
 		log.Println(err)
 	}
-	defer file.Close()
-	if _, err := file.WriteString(ast); err != nil {
-		log.Fatal(err)
-	}
-}
-
-func ParseCode(w http.ResponseWriter, r *http.Request) {
-	var jd ast.JData
-	err := json.NewDecoder(r.Body).Decode(&jd)
-	var nodes []ast.RequestBody
 
 	json.Unmarshal([]byte(jd.Data), &nodes)
-
 	genericNodes := make(map[int]ast.AstNode)
 	exeNodes := map[int]*ast.ExecutionNode{}
-	nodesCopy := nodes
+	nodesCopy = make([]ast.RequestBody, len(nodes))
+	copy(nodesCopy, nodes)
 	status := ""
 
 	for len(nodesCopy) >= 1 {
-		status = ""
 		for i := 0; i < len(nodesCopy); i++ {
 			genericNodes, status = utils.NodeFillManager(nodesCopy[i], genericNodes, exeNodes)
 			if status == ast.COMPLETE {
@@ -70,27 +65,81 @@ func ParseCode(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if len(genericNodes) > 0 {
-		print("sii")
+	for _, element := range exeNodes {
+		var node ast.AstNode
+		if val, ok := genericNodes[element.Receptor]; ok {
+			node = val
+		}
+
+		if node.AstType == "Code" {
+			result = node.Code
+		} else {
+
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
-	config := c.NewAppConfig()
-
-	conn, dbContext := d.NewDBContext(config.Configurations.Database.Endpoint, config.Configurations.Database.Key)
-	defer conn.Close()
-	txn := dbContext.DgraphClient.NewTxn()
-
-	const q = `query{
-		  bladerunner(func: uid(0x7a871617a)) {
-			Task.title
-		  }
-		}`
-	resp, err := txn.Query(context.Background(), q)
-
+	response := &ast.Response{StatusCode: "200", Result: result}
+	b, err := json.Marshal(response)
 	if err != nil {
-
-		log.Fatal(err)
+		fmt.Printf("Error: %s", err)
+		return
 	}
-	w.Write(resp.Json)
+	w.Write(b)
+}
+
+func RunCode(w http.ResponseWriter, r *http.Request) {
+
+	var jd ast.JData
+	var nodes []ast.RequestBody
+	var nodesCopy []ast.RequestBody
+
+	err := json.NewDecoder(r.Body).Decode(&jd)
+	if err != nil {
+		log.Println(err)
+	}
+
+	json.Unmarshal([]byte(jd.Data), &nodes)
+	genericNodes := make(map[int]ast.AstNode)
+	exeNodes := map[int]*ast.ExecutionNode{}
+	nodesCopy = make([]ast.RequestBody, len(nodes))
+	copy(nodesCopy, nodes)
+
+	status := ""
+
+	for len(nodesCopy) >= 1 {
+		for i := 0; i < len(nodesCopy); i++ {
+			genericNodes, status = utils.NodeFillManager(nodesCopy[i], genericNodes, exeNodes)
+			if status == ast.COMPLETE {
+				nodesCopy = append(nodesCopy[:i], nodesCopy[i+1:]...)
+				i--
+			}
+		}
+	}
+
+	var result string
+
+	for _, element := range exeNodes {
+		var node ast.AstNode
+
+		if val, ok := genericNodes[element.Receptor]; ok {
+			node = val
+		}
+
+		if node.AstType == "Code" {
+			result = scripts.ExecuteCode(node.Code)
+		} else {
+
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+
+	response := &ast.Response{StatusCode: "200", Result: result}
+	b, err := json.Marshal(response)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return
+	}
+	w.Write(b)
 }

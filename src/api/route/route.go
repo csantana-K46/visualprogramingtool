@@ -3,12 +3,13 @@ package route
 import (
 	c "api/controllers"
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
 )
 
 func GetRoute() *chi.Mux {
 	r := chi.NewRouter()
-	//r.Use(middleware.Recoverer)
+	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		// AllowedOrigins:   []string{"https://foo.com"}, // Use this to allow specific origin hosts
 		AllowedOrigins: []string{"https://*", "http://*"},
@@ -21,5 +22,6 @@ func GetRoute() *chi.Mux {
 	}))
 	r.Get("/", c.Get)
 	r.Post("/parse", c.ParseCode)
+	r.Post("/run", c.RunCode)
 	return r
 }
