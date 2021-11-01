@@ -65,6 +65,9 @@ func ParseCode(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	isCode := false
+	generatedCode := ""
+
 	for _, element := range exeNodes {
 		var node ast.AstNode
 		if val, ok := genericNodes[element.Receptor]; ok {
@@ -73,13 +76,20 @@ func ParseCode(w http.ResponseWriter, r *http.Request) {
 
 		if node.AstType == "Code" {
 			result = node.Code
+			isCode = true
 		} else {
-
+			result = utils.JoinModule(node, genericNodes, *element, result)
 		}
+	}
+	if !isCode {
+		result = utils.BuildPythonModule(result)
+		generatedCode = scripts.EvalCode(result)
+	} else {
+		generatedCode = result
 	}
 
 	w.WriteHeader(http.StatusOK)
-	response := &ast.Response{StatusCode: "200", Result: result}
+	response := &ast.Response{StatusCode: "200", Result: generatedCode}
 	b, err := json.Marshal(response)
 	if err != nil {
 		fmt.Printf("Error: %s", err)
@@ -89,50 +99,34 @@ func ParseCode(w http.ResponseWriter, r *http.Request) {
 }
 
 func RunCode(w http.ResponseWriter, r *http.Request) {
-
 	var jd ast.JData
-	var nodes []ast.RequestBody
-	var nodesCopy []ast.RequestBody
 
 	err := json.NewDecoder(r.Body).Decode(&jd)
 	if err != nil {
 		log.Println(err)
 	}
 
-	json.Unmarshal([]byte(jd.Data), &nodes)
-	genericNodes := make(map[int]ast.AstNode)
-	exeNodes := map[int]*ast.ExecutionNode{}
-	nodesCopy = make([]ast.RequestBody, len(nodes))
-	copy(nodesCopy, nodes)
+	result := scripts.ExecuteCode(jd.Data)
+	w.WriteHeader(http.StatusOK)
 
-	status := ""
+	response := &ast.Response{StatusCode: "200", Result: result}
+	b, err := json.Marshal(response)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return
+	}
+	w.Write(b)
+}
 
-	for len(nodesCopy) >= 1 {
-		for i := 0; i < len(nodesCopy); i++ {
-			genericNodes, status = utils.NodeFillManager(nodesCopy[i], genericNodes, exeNodes)
-			if status == ast.COMPLETE {
-				nodesCopy = append(nodesCopy[:i], nodesCopy[i+1:]...)
-				i--
-			}
-		}
+func Save(w http.ResponseWriter, r *http.Request) {
+	var jd ast.JData
+
+	err := json.NewDecoder(r.Body).Decode(&jd)
+	if err != nil {
+		log.Println(err)
 	}
 
-	var result string
-
-	for _, element := range exeNodes {
-		var node ast.AstNode
-
-		if val, ok := genericNodes[element.Receptor]; ok {
-			node = val
-		}
-
-		if node.AstType == "Code" {
-			result = scripts.ExecuteCode(node.Code)
-		} else {
-
-		}
-	}
-
+	result := scripts.ExecuteCode(jd.Data)
 	w.WriteHeader(http.StatusOK)
 
 	response := &ast.Response{StatusCode: "200", Result: result}

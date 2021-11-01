@@ -17,9 +17,14 @@ type Constant struct {
 	Value string
 }
 
-func (c Constant) Parse() string {
-
-	return fmt.Sprintf("Constant(value=%s))", c.Value)
+func (c Constant) Parse(singleQuote bool) string {
+	var result string
+	if singleQuote {
+		result = fmt.Sprintf("Constant(value='%s')", c.Value)
+	} else {
+		result = fmt.Sprintf("Constant(value=%s)", c.Value)
+	}
+	return result
 }
 
 type Assign struct {
@@ -28,7 +33,7 @@ type Assign struct {
 }
 
 func (a Assign) Parse() string {
-	return fmt.Sprintf("Assign(targets=[%s], value=%s", a.Name.Parse(), a.Value.Parse())
+	return fmt.Sprintf("Assign(targets=[%s], value=%s, lineno=0)", a.Name.Parse(), a.Value.Parse(false))
 }
 
 type BinOp struct {
@@ -64,7 +69,7 @@ func (i IfElse) Parse() string {
 	body := fmt.Sprintf("[%s]", i.Body)
 	orElse := fmt.Sprintf("[%s]", i.OrElse)
 
-	return fmt.Sprintf("If(test=%s, body=%s, orelse=%s, keywords=[]))])", test, body, orElse)
+	return fmt.Sprintf("If(test=%s, body=%s, orelse=%s, keywords=[])", test, body, orElse)
 }
 func (i IfElse) IsComplete() bool {
 	isComplete := false

@@ -23,5 +23,6 @@ func GetRoute() *chi.Mux {
 	r.Get("/", c.Get)
 	r.Post("/parse", c.ParseCode)
 	r.Post("/run", c.RunCode)
+	r.Post("/save", c.Save)
 	return r
 }

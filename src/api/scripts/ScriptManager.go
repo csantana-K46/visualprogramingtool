@@ -11,10 +11,7 @@ import (
 
 const SCRIPTROOT = "./scripts/script.py"
 
-func ExecuteCode(code string) string {
-	removeLines(SCRIPTROOT, 7, 100)
-	Write(code)
-
+func ExeC() string {
 	var result string
 	var out bytes.Buffer
 
@@ -29,13 +26,26 @@ func ExecuteCode(code string) string {
 	return result
 }
 
+func ExecuteCode(code string) string {
+	Write(code)
+	return ExeC()
+}
+
+func EvalCode(code string) string {
+	return ExecuteCode(code)
+}
+
 func AstScriptEvaluation() string {
 	var code string
 
 	return code
 }
 
+func ClearScript() {
+	removeLines(SCRIPTROOT, 8, 100)
+}
 func Write(data string) {
+	ClearScript()
 	file, err := os.OpenFile(SCRIPTROOT, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println(err)
@@ -84,7 +94,6 @@ func Delete() {
 }
 
 func removeLines(fn string, start, n int) (err error) {
-
 	var f *os.File
 	if f, err = os.OpenFile(fn, os.O_RDWR, 0); err != nil {
 		return

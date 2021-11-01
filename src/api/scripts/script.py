@@ -2,6 +2,7 @@
 #package main
 
 import sys
+import ast
 from ast import *
 
 def f():
