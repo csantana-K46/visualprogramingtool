@@ -30,7 +30,7 @@ Esta herramienta esta compuesta por:
 
 ## Notas
 
-1. Desarrolado en un ambiente Ubuntu 18
+1. Desarrollado en un ambiente Ubuntu 18
 2. Python 3.9, debe estar instalado.
 3. El archivo script.py debe tener permisos de ejecución.
 
