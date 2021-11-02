@@ -18,3 +18,7 @@ func NewDBContext(endpoint string, key string) (*grpc.ClientConn, dgraphContext)
 	}
 	return conn, dgraphContext{DgraphClient: dgo.NewDgraphClient(api.NewDgraphClient(conn))}
 }
+
+func NewProgram(title string, desc string, data string) Program {
+	return Program{Id: "_:alice", Title: title, Description: desc, DrawFlowData: data}
+}

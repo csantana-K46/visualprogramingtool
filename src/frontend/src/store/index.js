@@ -11,17 +11,28 @@ export default new Vuex.Store({
     output: '',
     error: '',
     programs: [],
+    program: {
+      Id: '',
+      Title: '',
+      Description: '',
+      DrawFlowData: ''
+    }
   },
   mutations: {
     setCode: (state, code) => (state.code = code),
     setOutput: (state, output) => (state.output = output),
     setError: (state, code) => (state.code = code),
     clearCode: (state) => (state.code = ''),
-    clearOutput: (state) => (state.output = '')
+    clearOutput: (state) => (state.output = ''),
+    setProgramList: (state, programs) => (state.programs = programs),
+    setProgram: (state, program) => (state.program = program)
   },
   getters: {
     allPrograms: (state) => {
       return state.programs
+    },
+    getProgram: (state) => {
+      return state.program
     },
     getCode : (state) => {
       return state.code
@@ -32,8 +43,41 @@ export default new Vuex.Store({
       commit('clearCode')
       commit('clearOutput')
     },
+    getDetails({commit}, uid){
+      Vue.axios.get(config.devServer.api + "programs/" + uid).then((response) => {
+        if(response.data.StatusCode === "200"){
+          let p = JSON.parse(response.data.Result).programByUid[0];
+          
+          commit('setProgram', {
+            Id: p.uid,
+            Title: p.title,
+            Description: p.description,
+            DrawFlowData: p.drawFlowData
+          });
+        }else{
+          commit('setError', response.data.Error)
+        }
+      })
+      .catch(error => {
+        this.errorMessage = error.message;
+        console.error("There was an error!", error);
+      });
+    },
+    programs ({commit}){
+      Vue.axios.get(config.devServer.api + "programs").then((response) => {
+        if(response.data.StatusCode === "200"){
+          commit('setProgramList', JSON.parse(response.data.Result).programs);
+        }else{
+          commit('setError', response.data.Error)
+        }
+      })
+      .catch(error => {
+        this.errorMessage = error.message;
+        console.error("There was an error!", error);
+      });
+    },
     parseCode ({commit}, drawflowData){
-      Vue.axios.post(config.devServer.api + "parse",{Data: JSON.stringify(drawflowData)},{}).then((response) => {
+      Vue.axios.post(config.devServer.api + "program/parse",{Data: JSON.stringify(drawflowData)},{}).then((response) => {
         if(response.data.StatusCode === "200"){
           commit('setCode', response.data.Result);
         }else{
@@ -45,12 +89,10 @@ export default new Vuex.Store({
         console.error("There was an error!", error);
       });
     },
-    save ({commit}, drawflowData){
-      Vue.axios.post(config.devServer.api + "save",{Data: JSON.stringify(drawflowData)},{}).then((response) => {
-        debugger
+    add ({commit}, drawflowData){
+      Vue.axios.post(config.devServer.api + "program/add",drawflowData,{}).then((response) => {
         if(response.data.StatusCode === "200"){
-          debugger
-          commit('setCode', response.data.Result);
+          this.$router.push('programs');
         }else{
           commit('setError', response.data.Error)
         }
@@ -61,7 +103,7 @@ export default new Vuex.Store({
       });
     },
     runCode ({commit}, sourceCode){
-      Vue.axios.post(config.devServer.api + "run",{Data: sourceCode},{}).then((response) => {
+      Vue.axios.post(config.devServer.api + "program/run",{Data: sourceCode},{}).then((response) => {
         if(response.data.StatusCode === "200"){
           commit('setOutput', response.data.Result);
         }else{
@@ -69,17 +111,6 @@ export default new Vuex.Store({
         }
       })
       .catch(error => {
-        this.errorMessage = error.message;
-        console.error("There was an error!", error);
-      });
-    },
-    save ({commit}, drawflowData){
-      debugger
-      Vue.axios.post("http://localhost:3000/save",{Data: JSON.stringify(drawflowData)},{}).then((response) => {
-        console.log(response.data)
-      })
-      .catch(error => {
-        debugger
         this.errorMessage = error.message;
         console.error("There was an error!", error);
       });

@@ -9,9 +9,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/dgraph-io/dgo/v210/protos/api"
+	"github.com/go-chi/chi"
 	"log"
 	"net/http"
 )
+
+func Response(resp string) []byte {
+	response := &ast.Response{StatusCode: "200", Result: resp}
+	b, err := json.Marshal(response)
+	if err != nil {
+		fmt.Printf("Error: %s", err)
+		return []byte{}
+	}
+	return b
+}
 
 func Get(w http.ResponseWriter, r *http.Request) {
 
@@ -89,51 +101,126 @@ func ParseCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	response := &ast.Response{StatusCode: "200", Result: generatedCode}
-	b, err := json.Marshal(response)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return
-	}
-	w.Write(b)
+	w.Write(Response(generatedCode))
 }
 
 func RunCode(w http.ResponseWriter, r *http.Request) {
-	var jd ast.JData
-
-	err := json.NewDecoder(r.Body).Decode(&jd)
+	var data ast.JData
+	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		log.Println(err)
 	}
 
-	result := scripts.ExecuteCode(jd.Data)
+	result := scripts.ExecuteCode(data.Data)
 	w.WriteHeader(http.StatusOK)
-
-	response := &ast.Response{StatusCode: "200", Result: result}
-	b, err := json.Marshal(response)
-	if err != nil {
-		fmt.Printf("Error: %s", err)
-		return
-	}
-	w.Write(b)
+	w.Write(Response(result))
 }
 
-func Save(w http.ResponseWriter, r *http.Request) {
-	var jd ast.JData
+func Add(w http.ResponseWriter, r *http.Request) {
+	var jd ast.Program
 
 	err := json.NewDecoder(r.Body).Decode(&jd)
 	if err != nil {
 		log.Println(err)
 	}
 
-	result := scripts.ExecuteCode(jd.Data)
-	w.WriteHeader(http.StatusOK)
-
-	response := &ast.Response{StatusCode: "200", Result: result}
-	b, err := json.Marshal(response)
+	program := d.NewProgram(jd.Name, jd.Description, jd.Data)
+	jSchema, err := json.Marshal(program)
 	if err != nil {
-		fmt.Printf("Error: %s", err)
+		fmt.Println(err)
 		return
 	}
-	w.Write(b)
+	config := c.NewAppConfig()
+	conn, dbContext := d.NewDBContext(config.Configurations.Database.Endpoint, config.Configurations.Database.Key)
+	defer conn.Close()
+	txn := dbContext.DgraphClient.NewTxn()
+
+	mu := &api.Mutation{
+		CommitNow: true,
+	}
+	mu.SetJson = jSchema
+
+	ctx := context.Background()
+	resp, err := txn.Mutate(ctx, mu)
+	if err != nil {
+		fmt.Println("Add error")
+		log.Fatal(err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(Response(resp.String()))
+}
+
+func List(w http.ResponseWriter, r *http.Request) {
+	//var programs ast.DgraphProgramListQuery
+	const query = `query{
+		programs(func: has(drawFlowData)){
+		uid
+		title
+		description
+		drawFlowData
+	  }
+	}`
+
+	config := c.NewAppConfig()
+	conn, dbContext := d.NewDBContext(config.Configurations.Database.Endpoint, config.Configurations.Database.Key)
+	defer conn.Close()
+	txn := dbContext.DgraphClient.NewTxn()
+
+	resp, err := txn.Query(context.Background(), query)
+	if err != nil {
+		fmt.Println("List error")
+		log.Fatal(err)
+	}
+	w.Write(Response(string(resp.Json)))
+}
+
+func GetDetail(w http.ResponseWriter, r *http.Request) {
+	variables := make(map[string]string)
+	variables["$id"] = chi.URLParam(r, "id")
+	const query = `query ProgramByUid($id: string){
+    	programByUid(func: uid($id)){
+        	uid
+    		title
+    		description
+    		drawFlowData
+    }
+}`
+	config := c.NewAppConfig()
+	conn, dbContext := d.NewDBContext(config.Configurations.Database.Endpoint, config.Configurations.Database.Key)
+	defer conn.Close()
+	txn := dbContext.DgraphClient.NewTxn()
+
+	resp, err := txn.QueryWithVars(context.Background(), query, variables)
+	if err != nil {
+		fmt.Println("List error")
+		log.Fatal(err)
+	}
+	w.Write(Response(string(resp.Json)))
+
+	/*puid := resp.Uids["alice"]
+		const q = `query Me($id: string){
+			me(func: uid($id)){
+				title
+				description
+				drawFlowData
+			}
+	} `
+		variables := make(map[string]string)
+		variables["$id"] = puid
+		resp2, err2 := txn.QueryWithVars(ctx, q, variables)
+		if err2 != nil {
+			log.Fatal(err2)
+		}
+		type Root struct {
+			Me d.Program `json:"me"`
+		}
+
+		var root  Root
+		err = json.Unmarshal(resp2.Json, &root)
+		if err != nil {
+			log.Fatal(err)
+		}
+		out, _ := json.MarshalIndent(root, "", "\t")
+		fmt.Printf("%s\n", out)*/
 }

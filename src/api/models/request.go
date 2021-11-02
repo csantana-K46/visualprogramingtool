@@ -55,3 +55,14 @@ type Response struct {
 	StatusCode string
 	Result     string
 }
+
+type Program struct {
+	Id          string `json:"uid"`
+	Name        string `json:"title"`
+	Description string `json:"description"`
+	Data        string `json:"drawFlowData"`
+}
+
+type DgraphProgramListQuery struct {
+	Program []Program `json:"program"`
+}
