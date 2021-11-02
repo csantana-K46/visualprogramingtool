@@ -152,7 +152,6 @@ func Add(w http.ResponseWriter, r *http.Request) {
 }
 
 func List(w http.ResponseWriter, r *http.Request) {
-	//var programs ast.DgraphProgramListQuery
 	const query = `query{
 		programs(func: has(drawFlowData)){
 		uid
@@ -197,30 +196,4 @@ func GetDetail(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	w.Write(Response(string(resp.Json)))
-
-	/*puid := resp.Uids["alice"]
-		const q = `query Me($id: string){
-			me(func: uid($id)){
-				title
-				description
-				drawFlowData
-			}
-	} `
-		variables := make(map[string]string)
-		variables["$id"] = puid
-		resp2, err2 := txn.QueryWithVars(ctx, q, variables)
-		if err2 != nil {
-			log.Fatal(err2)
-		}
-		type Root struct {
-			Me d.Program `json:"me"`
-		}
-
-		var root  Root
-		err = json.Unmarshal(resp2.Json, &root)
-		if err != nil {
-			log.Fatal(err)
-		}
-		out, _ := json.MarshalIndent(root, "", "\t")
-		fmt.Printf("%s\n", out)*/
 }
